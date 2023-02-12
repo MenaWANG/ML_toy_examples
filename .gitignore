@@ -1,5 +1,6 @@
 # dev and virtual env
 .dev/
+dev/
 .venv/
 .data/
 
