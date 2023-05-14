@@ -1,6 +1,6 @@
 # dev and virtual env
 .dev/
-dev/
+.devlog/
 .venv/
 .data/
 
