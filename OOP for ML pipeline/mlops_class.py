@@ -37,6 +37,26 @@ class MLUtils:
         return X_train, X_test, y_train, y_test
     
     @staticmethod
+    def get_best_fold(fold_log, metric, best_set_name):
+        """This function find the fold that performed the best on a selected metric 
+        and return the target best_set for that fold
+        """
+        best_fold = None
+        best_score = 0.0  # Initialize with a lower value for AUC
+        metric_values = []  # Store metric values for all folds
+
+        for fold, data in fold_log.items():
+            score = data[metric]
+            metric_values.append(score)
+
+            if score > best_score:
+                best_score = score
+                best_fold = fold
+
+        std_metric = np.std(metric_values)
+        print(f'The best score is {best_score}, and the std is {std_metric}')
+
+        return fold_log[best_fold][best_set_name]
     
 
 
