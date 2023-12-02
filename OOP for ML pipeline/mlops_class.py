@@ -6,7 +6,9 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GroupShuffleSplit
-from optbinning import OptimalBinning
+from sklearn.metrics import roc_auc_score
+from sklearn.feature_selection import RFE, RFECV
+
 
 class MLUtils:
     @staticmethod
@@ -58,7 +60,11 @@ class MLUtils:
 
         return fold_log[best_fold][best_set_name]
     
-
+    @staticmethod
+    def gini_scorer(y_true, y_prob):
+        auc = roc_auc_score(y_true, y_prob)
+        gini = 2 * auc - 1
+        return gini
 
 class CustomTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, bin_features=None, num_features=None, 
@@ -139,3 +145,60 @@ class CustomTransformer(BaseEstimator, TransformerMixin):
     def fit_transform(self, X, y=None):
         self.fit(X, y)
         return self.transform(X)
+
+class FeatureSelector:
+    """This feature selector takes any estimator, scoring and CV methods 
+    and feature selection configurations and return the best set selectioned through RFE. 
+    """
+    def __init__(self, estimator, min_features_to_select=None, step=1, scorer=None, cv=None):
+        """
+        Initialize the FeatureSelector.
+
+        Args:
+            estimator: The estimator to be used for feature selection, e.g., a classifier or regressor.
+            n_features_to_select: The number of features to select. If None, half of the features will be selected.
+            step: The number of features to remove at each iteration (default is 1).
+            cv: Cross-validation generator (default is StratifiedKFold with 5 folds).
+        """
+        self.estimator = estimator
+        self.min_features_to_select = min_features_to_select
+        self.step = step
+        self.scorer = scorer
+        self.cv = cv
+
+    def select_features(self, X, y):
+        """
+        Select the best features using RFE (Recursive Feature Elimination) and cross-validation.
+
+        Parameters:
+            X: The feature matrix.
+            y: The target values.
+
+        Returns:
+            selected_features: The selected feature indices.
+        """
+        self.rfecv = RFECV(estimator=self.estimator, 
+                  min_features_to_select=self.min_features_to_select, 
+                  step=self.step,
+                  scoring=self.scorer,
+                  cv=self.cv)
+        selected_feature_indices = self.rfecv.fit(X, y).support_
+        selected_features = X.loc[:, selected_feature_indices].columns.tolist()
+        cv_score = np.mean(self.rfecv.cv_results_['mean_test_score'])
+
+        return selected_features, cv_score
+    
+    def feature_score_plot(self):
+        import matplotlib.pyplot as plt
+
+        n_scores = len(self.rfecv.cv_results_["mean_test_score"])
+        plt.figure()
+        plt.xlabel("Number of features selected")
+        plt.ylabel("Mean test auc")
+        plt.errorbar(
+            range(self.min_features_to_select, n_scores + self.min_features_to_select),
+            self.rfecv.cv_results_["mean_test_score"],
+            yerr=self.rfecv.cv_results_["std_test_score"],
+        )
+        plt.title("Recursive Feature Elimination \nwith number of features")
+        plt.show()
