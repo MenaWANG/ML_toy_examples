@@ -102,6 +102,41 @@ class MLUtils:
         # Adjust layout
         plt.tight_layout()
         plt.show()
+    
+    @staticmethod
+    def plot_num_variables(df, numeric_columns, num_plots_per_row=2):
+        """
+        Generate a combined plot with multiple subplots for numeric variables in a DataFrame using Seaborn.
+
+        Parameters:
+        - df: DataFrame
+        - numeric_columns: list of str, names of numeric variable columns in the DataFrame
+        - num_plots_per_row: number of plots per row
+        """
+        num_columns = len(numeric_columns)
+        num_rows = (num_columns + 2) // num_plots_per_row
+
+        # Create subplots
+        fig, axes = plt.subplots(num_rows, num_plots_per_row, figsize=(15, num_rows * 4))
+
+        # Flatten the axes array for easier indexing
+        axes = axes.flatten()
+
+        for i, variable in enumerate(numeric_columns):
+            # Create a histogram using Seaborn
+            sns.histplot(data=df, x=variable, color = "#0099DD", ax=axes[i], kde=True)
+            axes[i].set_xlabel(f'{variable.capitalize()}')
+            axes[i].set_ylabel('Frequency')
+            axes[i].set_title(f'Histogram for {variable.capitalize()}', fontweight='bold')
+
+        # Hide empty subplots if any
+        for j in range(i + 1, num_rows * num_plots_per_row):
+            fig.delaxes(axes[j])
+
+        # Adjust layout
+        plt.tight_layout()
+        plt.show()
+
 
 class CustomTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, bin_features=None, num_features=None, 
