@@ -8,6 +8,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.metrics import roc_auc_score
 from sklearn.feature_selection import RFE, RFECV
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 class MLUtils:
@@ -65,6 +67,41 @@ class MLUtils:
         auc = roc_auc_score(y_true, y_prob)
         gini = 2 * auc - 1
         return gini
+    
+    @staticmethod
+    def plot_cat_variables(df, categorical_columns,num_plots_per_row=3):
+        """
+        Generate a combined plot with multiple subplots for categorical variables in a DataFrame using Seaborn.
+
+        Parameters:
+        - df: DataFrame
+        - categorical_columns: list of str, names of categorical variable columns in the DataFrame
+        - num_plots_per_row: number of plots per row
+        """
+        num_columns = len(categorical_columns)
+        num_rows = (num_columns + 2) // num_plots_per_row
+
+        # Create subplots
+        fig, axes = plt.subplots(num_rows, num_plots_per_row,figsize=(15, num_rows * 4))
+
+        # Flatten the axes array for easier indexing
+        axes = axes.flatten()
+
+        for i, variable in enumerate(categorical_columns):
+            # Create a bar plot using Seaborn
+            sns.countplot(x=variable, data=df, color = "#0099DD", ax=axes[i])
+            axes[i].set_xlabel(f'{variable.capitalize()}')
+            axes[i].set_ylabel('Count')
+            axes[i].set_title(f'Univariate Bar Plot for {variable.capitalize()}', fontweight='bold')
+            axes[i].tick_params(axis='x', rotation=45)
+
+        # Hide empty subplots if any
+        for j in range(i + 1, num_rows * num_plots_per_row):
+            fig.delaxes(axes[j])
+
+        # Adjust layout
+        plt.tight_layout()
+        plt.show()
 
 class CustomTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, bin_features=None, num_features=None, 
