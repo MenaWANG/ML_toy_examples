@@ -10,6 +10,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.feature_selection import RFE, RFECV
 import matplotlib.pyplot as plt
 import seaborn as sns
+import shap
 
 
 class MLUtils:
@@ -46,8 +47,8 @@ class MLUtils:
         and return the target best_set for that fold
         """
         best_fold = None
-        best_score = 0.0  # Initialize with a lower value for AUC
-        metric_values = []  # Store metric values for all folds
+        best_score = 0.0  
+        metric_values = []  # store metric values for all folds
 
         for fold, data in fold_log.items():
             score = data[metric]
@@ -58,7 +59,7 @@ class MLUtils:
                 best_fold = fold
 
         std_metric = np.std(metric_values)
-        print(f'The best score is {best_score}, and the std is {std_metric}')
+        print(f'The best score is {best_score:.3}, and the std is {std_metric:.3}')
 
         return fold_log[best_fold][best_set_name]
     
@@ -139,8 +140,8 @@ class MLUtils:
 
 
 class CustomTransformer(BaseEstimator, TransformerMixin):
-    def __init__(self, bin_features=None, num_features=None, 
-                 cat_features=None, binning_settings=None):
+    def __init__(self, bin_features=[], num_features=[], 
+                 cat_features=[], binning_settings=None):
         self.bin_features = bin_features
         self.num_features = num_features
         self.cat_features = cat_features
@@ -222,7 +223,7 @@ class FeatureSelector:
     """This feature selector takes any estimator, scoring and CV methods 
     and feature selection configurations and return the best set selectioned through RFE. 
     """
-    def __init__(self, estimator, min_features_to_select=None, step=1, scorer=None, cv=None):
+    def __init__(self, estimator, min_features_to_select=2, step=1, scorer=None, cv=None):
         """
         Initialize the FeatureSelector.
 
@@ -256,21 +257,95 @@ class FeatureSelector:
                   cv=self.cv)
         selected_feature_indices = self.rfecv.fit(X, y).support_
         selected_features = X.loc[:, selected_feature_indices].columns.tolist()
-        cv_score = np.mean(self.rfecv.cv_results_['mean_test_score'])
+        cv_score = np.max(self.rfecv.cv_results_['mean_test_score'])
 
         return selected_features, cv_score
     
     def feature_score_plot(self):
-        import matplotlib.pyplot as plt
-
         n_scores = len(self.rfecv.cv_results_["mean_test_score"])
+        feature_numbers = range(self.min_features_to_select, n_scores + self.min_features_to_select)
+
+        # Find the index of the maximum mean test score
+        max_score_index = np.argmax(self.rfecv.cv_results_["mean_test_score"])
+        max_score = self.rfecv.cv_results_["mean_test_score"][max_score_index]
+        print(f'the max test score is {max_score:.3} achieved with {max_score_index+self.min_features_to_select} features')
+        
+        # Calculate the y-axis limits
+        min_y = min(self.rfecv.cv_results_["mean_test_score"] - self.rfecv.cv_results_["std_test_score"])
+        max_y = max(self.rfecv.cv_results_["mean_test_score"] + self.rfecv.cv_results_["std_test_score"])
+        
+        # Plot the mean test scores
         plt.figure()
         plt.xlabel("Number of features selected")
-        plt.ylabel("Mean test auc")
+        plt.ylabel("Mean test score")
         plt.errorbar(
-            range(self.min_features_to_select, n_scores + self.min_features_to_select),
+            feature_numbers,
             self.rfecv.cv_results_["mean_test_score"],
             yerr=self.rfecv.cv_results_["std_test_score"],
+            label="Mean Test Score",
         )
-        plt.title("Recursive Feature Elimination \nwith number of features")
+
+        # Highlight the bar with the highest score by covering the entire y-axis range
+        plt.bar(
+            feature_numbers[max_score_index],
+            max_y - min_y,  # Bar height
+            bottom=min_y,   # Set the bottom of the bar to the minimum y-axis value
+            color='red',    
+            alpha=0.3,      
+            label="Max Test Score",
+        )
+
+        # Add a textbox at the bottom right with information about the maximum score and number of features
+        text_str = f"Max Score: {max_score:.3f}\n# of Features: {feature_numbers[max_score_index]}"
+        plt.text(0.98, 0.02, text_str, transform=plt.gca().transAxes,
+                 verticalalignment='bottom', horizontalalignment='right',
+                 bbox=dict(facecolor='white', alpha=0.8))
+
+        # Set y-axis limits for better visibility
+        plt.ylim(min_y, max_y)
+
+        plt.title("Feature Selection\nScore by number of features")
+        # plt.legend()
         plt.show()
+
+class ModelPipeline(BaseEstimator):
+
+    def __init__(self, custom_transformer=None, model=None):
+        self.custom_transformer = custom_transformer
+        self.model = model
+    
+    def fit(self, X, y=None):
+        X_train_transformed = self.custom_transformer.fit_transform(X, y)
+        self.model.fit(X_train_transformed, y)
+    
+    def predict_proba(self,X):
+        X_new_transformed = self.custom_transformer.transform(X)
+        return self.model.predict_proba(X_new_transformed)
+        
+    def explain_model(self,X):
+        X_transformed = self.custom_transformer.transform(X.copy())
+        self.X_explain = X_transformed.copy()
+        # get the original values for binned and numeric features to show when explaining cases
+        self.X_explain[self.custom_transformer.bin_features + self.custom_transformer.num_features] = X[self.custom_transformer.bin_features + self.custom_transformer.num_features]
+        self.X_explain.reset_index(drop=True)
+        explainer = shap.Explainer(self.model)
+        self.shap_values = explainer(X_transformed)  
+        try:
+            self.shap_values.values.shape[2] 
+            self.both_class = True
+        except:
+            self.both_class = False
+        if self.both_class:
+            shap.summary_plot(self.shap_values[:,:,1])
+        elif self.both_class == False:
+            shap.summary_plot(self.shap_values)
+    
+    def explain_case(self,n):
+        if self.shap_values is None:
+            print("pls explain model first")
+        else:
+            self.shap_values.data = self.X_explain
+            if self.both_class:
+                shap.plots.waterfall(self.shap_values[:,:,1][n-1])
+            elif self.both_class == False:
+                shap.plots.waterfall(self.shap_values[n-1])
