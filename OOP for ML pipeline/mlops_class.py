@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import itertools
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
@@ -138,6 +139,49 @@ class MLUtils:
         plt.tight_layout()
         plt.show()
 
+    @staticmethod    
+    def scatterplot_highlight(X, highlight, num_plots_per_row=3):
+        """
+        This function takes X and identified outliers or anomalies using any desired algorithm and 
+        creates scatter plots to highlight these outliers for all feature combinations in X.
+
+        Parameters:
+        - X: DataFrame to be analyzed, it should only contains numeric features
+        - highlight: Array with two values, 0 and 1, with 1 representing cases to be highlighted
+        - num_plots_per_row: number of scatter plots to display per row (default is 3)
+        """
+        
+        num_features = X.shape[1]
+
+        # Generate all combinations of feature indices
+        feature_combinations = list(itertools.combinations(range(num_features), 2))
+
+        # Calculate the number of rows needed for the subplots
+        num_rows = len(feature_combinations) // num_plots_per_row
+        if len(feature_combinations) % num_plots_per_row != 0:
+            num_rows += 1
+
+        # Create subplots
+        fig, axes = plt.subplots(num_rows, num_plots_per_row, figsize=(15, 5 * num_rows))
+
+        # Flatten the axes array for easier indexing
+        axes = axes.flatten()
+
+        for i, (feature1, feature2) in enumerate(feature_combinations):
+            # Calculate subplot position
+            row = i // num_plots_per_row
+            col = i % num_plots_per_row
+
+            # Scatter plot for the current feature combination
+            sns.scatterplot(x=X.iloc[:, feature1], y=X.iloc[:, feature2], 
+                            hue=highlight, palette={0: 'green', 1: 'red'}, 
+                            ax=axes[i])
+            axes[i].set_title(f'Scatterplot: {X.columns[feature2]} vs {X.columns[feature1]}')
+
+        # Adjust layout and show plots
+        plt.tight_layout()
+        plt.show()
+
 
 class CustomTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, bin_features=[], num_features=[], 
@@ -261,7 +305,7 @@ class FeatureSelector:
 
         return selected_features, cv_score
     
-    def feature_score_plot(self):
+    def summary_plot(self):
         n_scores = len(self.rfecv.cv_results_["mean_test_score"])
         feature_numbers = range(self.min_features_to_select, n_scores + self.min_features_to_select)
 
