@@ -12,6 +12,7 @@ from sklearn.feature_selection import RFE, RFECV
 import matplotlib.pyplot as plt
 import seaborn as sns
 import shap
+import mlflow
 
 
 class MLUtils:
@@ -352,13 +353,29 @@ class FeatureSelector:
         # plt.legend()
         plt.show()
 
-class ModelPipeline(BaseEstimator):
+class ModelPipeline(mlflow.pyfunc.PythonModel):
+    """This class takes a model with the optimized configuration 
+        (e.g., algorithm, hyperparameters, feature_set), fit it on the train data,
+        and then be ready to serve and explain its predictions.
+
+    Args:
+        custom_transformer: A preprocessing pipeline that can be trained to preprocess the data
+        model: any algorithm that follows sklearn API which hyperparameters has been optimized for the problem
+        # feature_set, let's add this at the next iteration
+        # TODO: maybe in future we will prefer to pass custom_transformer_params and model_params into the mlops_class pipeline, so it is easier for our user to use
+    """
 
     def __init__(self, custom_transformer=None, model=None):
         self.custom_transformer = custom_transformer
         self.model = model
     
     def fit(self, X, y=None):
+        """Fit the preprocessing transformer and the model using training data.
+
+    Args:
+        X (DataFrame): Training data to fit the preprocessing transformer and the model.
+        y (Series): Target labels. 
+        """
         X_train_transformed = self.custom_transformer.fit_transform(X, y)
         self.model.fit(X_train_transformed, y)
     
