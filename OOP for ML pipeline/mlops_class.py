@@ -7,7 +7,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GroupShuffleSplit
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, fbeta_score
 from sklearn.feature_selection import RFE, RFECV
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -70,6 +70,11 @@ class MLUtils:
         auc = roc_auc_score(y_true, y_prob)
         gini = 2 * auc - 1
         return gini
+    
+    @staticmethod
+    def fbeta_scorer(y_true, y_prob, beta=1):
+        fbeta = fbeta_score(y_true, y_prob, beta)
+        return fbeta    
     
     @staticmethod
     def plot_cat_variables(df, categorical_columns,num_plots_per_row=3):
