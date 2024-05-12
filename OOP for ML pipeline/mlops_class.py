@@ -233,6 +233,93 @@ class MLUtils:
         else:
             print(f"The column(s) {', '.join(cols)} does not form a primary key.")
             return False
+    
+    @staticmethod
+    def find_duplicates(df, cols):
+        """
+        Function to find duplicate rows in a Pandas DataFrame based on specified columns.
+
+        Args:
+        - df: Pandas DataFrame
+        - cols: List of column names to check for duplicates
+
+        Returns:
+        - duplicates: Pandas DataFrame containing duplicate rows based on the specified columns,
+                    with the specified columns and the 'count' column as the first columns,
+                    along with the rest of the columns from the original DataFrame
+        """
+        # Filter out rows with missing values in any of the specified columns
+        df = df.dropna(subset=cols)
+
+        # Group by the specified columns and count the occurrences
+        dup_counts = df.groupby(cols).size().reset_index(name='count')
+        
+        # Filter to retain only the rows with count greater than 1
+        duplicates = dup_counts[dup_counts['count'] > 1]
+        
+        # Join with the original DataFrame to include all columns
+        duplicates = pd.merge(duplicates, df, on=cols, how='inner')
+        
+        # Reorder columns with 'count' as the first column
+        duplicate_cols = ['count'] + cols
+        duplicates = duplicates[duplicate_cols + [c for c in df.columns if c not in cols]]
+        
+        return duplicates
+
+
+
+    @staticmethod
+    def cols_responsible_for_id_dups(df, id_list):
+        """
+        Warning: This diagnostic function may take a long time to run.
+        
+        This function checks each non-ID column for each unique combination of ID columns to detect differences. 
+        It generates a summary table indicating the columns and their respective difference counts 
+        when the specified ID columns have the same values. This can help identify columns 
+        responsible for duplicates for any given ID combinations in the id_list.
+        
+        Please note that this process involves checking each non-ID column against all unique combinations 
+        of ID columns, which can be time-consuming for large datasets.
+        
+        Args:
+        - df (DataFrame): The Pandas DataFrame to analyze.
+        - id_list (list): A list of column names representing the ID columns.
+
+        Returns:
+        - summary_table (DataFrame): A Pandas DataFrame containing two columns - 'col_name' and 
+        'difference_counts'. 'col_name' represents the column name, and 'difference_counts' 
+        represents the count of differing values for each column when ID columns have the same values.
+        """
+        # Filter out rows with missing values in any of the ID columns
+        filtered_df = df.dropna(subset=id_list)
+        
+        # Function to count differences between columns
+        def count_differences(col_name):
+            """
+            Counts the number of differing values for a given column when ID columns have the same values.
+
+            Args:
+            - col_name (str): The name of the column to analyze.
+
+            Returns:
+            - count (int): The count of differing values.
+            """
+            # Group by the ID columns and the current column, then count distinct values
+            distinct_count = filtered_df.groupby(id_list + [col_name]).size().reset_index().groupby(id_list).size().reset_index(name="count")
+            return distinct_count[distinct_count["count"] > 1]["count"].count()
+        
+        # Get the column names excluding the ID columns
+        value_cols = [col_name for col_name in df.columns if col_name not in id_list]
+        
+        # Create a DataFrame to store the summary table
+        summary_data = [(col_name, count_differences(col_name)) for col_name in value_cols]
+        summary_table = pd.DataFrame(summary_data, columns=["col_name", "difference_counts"])
+        
+        # Sort the summary_table by "difference_counts" from large to small
+        summary_table = summary_table.sort_values(by="difference_counts", ascending=False)
+        
+        return summary_table
+
 
 
 
