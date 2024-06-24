@@ -16,12 +16,13 @@ import mlflow
 
 
 class MLUtils:
+
     @staticmethod
     def group_train_test_split(X, y, group, test_size=0.2, random_state=42):
         """
         Split a dataset into training and testing sets while ensuring that members of the same group remain together in either the training or testing set, i.e., they are not separated.
 
-        Args:
+        Parameters:
             X (DataFrame): Features or input data.
             y (array-like): Target values or labels.
             group (array-like): Array representing group memberships for each data point.
@@ -193,7 +194,7 @@ class MLUtils:
         """
         Check if the combination of specified columns forms a primary key in the DataFrame.
 
-        Args:
+        Parameters:
             df (DataFrame): The DataFrame to check.
             cols (list): A list of column names to check for forming a primary key.
 
@@ -239,7 +240,7 @@ class MLUtils:
         """
         Function to find duplicate rows in a Pandas DataFrame based on specified columns.
 
-        Args:
+        Parameters:
         - df: Pandas DataFrame
         - cols: List of column names to check for duplicates
 
@@ -281,7 +282,7 @@ class MLUtils:
         Please note that this process involves checking each non-ID column against all unique combinations 
         of ID columns, which can be time-consuming for large datasets.
         
-        Args:
+        Parameters:
         - df (DataFrame): The Pandas DataFrame to analyze.
         - id_list (list): A list of column names representing the ID columns.
 
@@ -298,7 +299,7 @@ class MLUtils:
             """
             Counts the number of differing values for a given column when ID columns have the same values.
 
-            Args:
+            Parameters:
             - col_name (str): The name of the column to analyze.
 
             Returns:
@@ -411,7 +412,7 @@ class FeatureSelector:
         """
         Initialize the FeatureSelector.
 
-        Args:
+        Parameters:
             estimator: The estimator to be used for feature selection, e.g., a classifier or regressor.
             n_features_to_select: The number of features to select. If None, half of the features will be selected.
             step: The number of features to remove at each iteration (default is 1).
