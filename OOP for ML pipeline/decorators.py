@@ -11,10 +11,10 @@ def timing_log(func):
     - callable: The wrapped function with timing logging.
     """
     def wrapper(*args, **kwargs):
-        start_time = time.time()  # Record the start time
+        start_time = time.time()  
         result = func(*args, **kwargs)  # Call the function
-        end_time = time.time()  # Record the end time
-        runtime = end_time - start_time  # Calculate the runtime
+        end_time = time.time()  
+        runtime = end_time - start_time  
         print(f"Function '{func.__name__}' took {runtime:.4f} seconds to run")
         return result  # Return the function's result
     return wrapper

@@ -74,7 +74,7 @@ class MLUtils:
     
     @staticmethod
     def fbeta_scorer(y_true, y_prob, beta=1):
-        fbeta = fbeta_score(y_true, y_prob, beta)
+        fbeta = fbeta_score(y_true, y_prob, beta=beta)
         return fbeta    
     
     @staticmethod
