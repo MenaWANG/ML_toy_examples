@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import shap
 import mlflow
+from typing import List
 
 
 class MLUtils:
@@ -320,6 +321,63 @@ class MLUtils:
         summary_table = summary_table.sort_values(by="difference_counts", ascending=False)
         
         return summary_table
+
+    @staticmethod
+    def print_formatted_df(df: pd.DataFrame, value_cols: List[str], use_display: bool = True) -> None:
+        """
+        Print a DataFrame with specified columns formatted as numbers with commas and two decimal places.
+
+        Parameters:
+            df (pd.DataFrame): The DataFrame to format.
+            value_cols (List[str]): List of column names to format.
+            use_display (bool): Whether to use `display` (True) or `print` (False). Defaults to True.
+
+        Returns:
+            None
+        """
+        # Make a copy of the DataFrame to avoid modifying the original
+        formatted_df = df.copy()
+        
+        # Apply formatting to each specified column
+        for col in value_cols:
+            if col in formatted_df.columns:
+                formatted_df[col] = formatted_df[col].apply(lambda x: f"{x:,.2f}" if pd.notnull(x) else x)
+        
+        # Display or print the formatted DataFrame based on `use_display`
+        if use_display:
+            display(formatted_df)  # using Databricks
+        else:
+            print(formatted_df.to_string(index=False))
+    
+    def group_agg_sorted(df: pd.DataFrame, group_vars: list, value_var: str, agg='mean') -> pd.DataFrame:
+        """
+        Group by the given list of variables, calculate the specified aggregation (mean or sum) of a value variable, and order by the aggregated value in descending order. 
+        Prints formatted numbers and returns the unformatted DataFrame.
+
+        Parameters:
+            df (pd.DataFrame): The input DataFrame.
+            group_vars (list): List of column names to group by.
+            value_var (str): The column name of the value variable to calculate the aggregation.
+            agg (str): The aggregation method, either 'mean' or 'sum'. Default is 'mean'.
+
+        Returns:
+            pd.DataFrame: The resulting DataFrame with the grouped aggregations, ordered by the aggregation in descending order.
+        """
+        col_name = f"{agg}_{value_var}"
+
+        # Group by the specified variables and calculate the stats
+        if agg == 'mean':
+            grouped_df = df.groupby(group_vars)[value_var].mean().reset_index()
+        elif agg == 'sum':
+            grouped_df = df.groupby(group_vars)[value_var].sum().reset_index()
+        grouped_df = grouped_df.rename(columns={value_var: col_name})
+        
+        # Order the resulting DataFrame by the stats in descending order
+        ordered_df = grouped_df.sort_values(by=col_name, ascending=False).reset_index(drop=True)
+        
+        MLUtils.print_formatted_df(ordered_df, [col_name])
+        
+        return ordered_df
 
 
 
