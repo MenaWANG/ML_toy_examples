@@ -367,9 +367,9 @@ class MLUtils:
 
         # Group by the specified variables and calculate the stats
         if agg == 'mean':
-            grouped_df = df.groupby(group_vars)[value_var].mean().reset_index()
+            grouped_df = df.groupby(group_vars, observed=False)[value_var].mean().reset_index()
         elif agg == 'sum':
-            grouped_df = df.groupby(group_vars)[value_var].sum().reset_index()
+            grouped_df = df.groupby(group_vars, observed=False)[value_var].sum().reset_index()
         grouped_df = grouped_df.rename(columns={value_var: col_name})
         
         # Order the resulting DataFrame by the stats in descending order
