@@ -19,6 +19,38 @@ from typing import List
 class MLUtils:
 
     @staticmethod
+    def check_flag(row: pd.Series, flag_str: str, unflagged_str: str) -> bool:
+        """
+        Checks if a specific flag string is present and an unflagged string is not present in any of the row columns.
+        The search for both strings is case-insensitive.
+
+        Parameters:
+            row (pd.Series): A row from the DataFrame.
+            flag_str (str): The string to check for presence in the row.
+            unflagged_str (str): The string to check for absence in the row.
+
+        Returns:
+            bool: True if flag_str is present and unflagged_str is not present, False otherwise.
+
+        Example:
+            >>> import pandas as pd
+            >>> data = {
+            >>>     'col1': ['No FLAG', 'flag here', 'Unflagged'],
+            >>>     'col2': ['No flag', 'Nothing', 'Unflagged'],
+            >>>     'col3': ['Nothing', 'Nothing', 'Nothing']
+            >>> }
+            >>> df = pd.DataFrame(data)
+            >>> df['flag_col'] = df[['col1', 'col2', 'col3']].apply(check_flag, axis=1, flag_str='flag', unflagged_str='unflagged')
+            >>> print(df)
+        """
+        # Convert to lowercase for case-insensitive comparison
+        row_lower = row.str.lower()
+        has_flag = row_lower.str.contains(flag_str.lower()).any()
+        has_unflagged = row_lower.str.contains(unflagged_str.lower()).any()
+        return has_flag and not has_unflagged
+
+
+    @staticmethod
     def group_train_test_split(X, y, group, test_size=0.2, random_state=42):
         """
         Split a dataset into training and testing sets while ensuring that members of the same group remain together in either the training or testing set, i.e., they are not separated.
